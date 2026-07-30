@@ -1597,10 +1597,21 @@ bridge_subscribe(nng_socket *sock, conf_bridge_node *node,
 	bridge_param *bridge_arg = (bridge_param *)node->bridge_arg;
 
 	nng_mtx_lock(reload_lock);
+	if (bridge_arg == NULL || bridge_arg->client == NULL ||
+	    bridge_arg->client->send_aio == NULL) {
+		nng_mtx_unlock(reload_lock);
+		return NNG_EINVAL;
+	}
+	if (nng_aio_busy(bridge_arg->client->send_aio)) {
+		nng_mtx_unlock(reload_lock);
+		return NNG_EBUSY;
+	}
 	// create a SUBSCRIBE message
 	nng_msg *submsg;
-	if (nng_mqtt_msg_alloc(&submsg, 0) != 0)
+	if (nng_mqtt_msg_alloc(&submsg, 0) != 0) {
+		nng_mtx_unlock(reload_lock);
 		return NNG_ENOMEM;
+	}
 	nng_mqtt_msg_set_packet_type(submsg, NNG_MQTT_SUBSCRIBE);
 	nng_mqtt_msg_set_subscribe_topics(submsg, topic_qos, sub_count);
 	if (properties)
@@ -1613,15 +1624,18 @@ bridge_subscribe(nng_socket *sock, conf_bridge_node *node,
 		return rv;
 	}
 	nng_aio_set_msg(aio, submsg);
+	nng_aio_set_timeout(aio, 5000);
 	nng_send_aio(*sock, aio);
-
-	// Hold to get suback
-	nng_aio_wait(aio);
 	nng_mtx_unlock(reload_lock);
 
-	if (nng_aio_result(aio) != 0 || (msg = nng_aio_get_msg(aio)) == NULL) {
+	// Hold to get suback without blocking bridge reload.
+	nng_aio_wait(aio);
+
+	rv = nng_aio_result(aio);
+	if (rv != 0 || (msg = nng_aio_get_msg(aio)) == NULL) {
 		// Connection losted
-		log_warn("Can't get suback. Maybe connection of bridge was closed.");
+		log_warn("Can't get suback: %s (%d). Maybe connection of bridge was closed.",
+		    nng_strerror(rv), rv);
 		rv = -3;
 		goto done;
 	}
@@ -1664,10 +1678,21 @@ bridge_unsubscribe(nng_socket *sock, conf_bridge_node *node,
 	bridge_param *bridge_arg = (bridge_param *)node->bridge_arg;
 
 	nng_mtx_lock(reload_lock);
+	if (bridge_arg == NULL || bridge_arg->client == NULL ||
+	    bridge_arg->client->send_aio == NULL) {
+		nng_mtx_unlock(reload_lock);
+		return NNG_EINVAL;
+	}
+	if (nng_aio_busy(bridge_arg->client->send_aio)) {
+		nng_mtx_unlock(reload_lock);
+		return NNG_EBUSY;
+	}
 	// create a UNSUBSCRIBE message
 	nng_msg *unsubmsg;
-	if (nng_mqtt_msg_alloc(&unsubmsg, 0) != 0)
+	if (nng_mqtt_msg_alloc(&unsubmsg, 0) != 0) {
+		nng_mtx_unlock(reload_lock);
 		return NNG_ENOMEM;
+	}
 	nng_mqtt_msg_set_packet_type(unsubmsg, NNG_MQTT_UNSUBSCRIBE);
 	nng_mqtt_msg_set_unsubscribe_topics(unsubmsg, topics, unsub_count);
 	if (properties)
@@ -1680,15 +1705,18 @@ bridge_unsubscribe(nng_socket *sock, conf_bridge_node *node,
 		return rv;
 	}
 	nng_aio_set_msg(aio, unsubmsg);
+	nng_aio_set_timeout(aio, 5000);
 	nng_send_aio(*sock, aio);
-
-	// Hold to get suback
-	nng_aio_wait(aio);
 	nng_mtx_unlock(reload_lock);
 
-	if (nng_aio_result(aio) != 0 || (msg = nng_aio_get_msg(aio)) == NULL) {
+	// Hold to get unsuback without blocking bridge reload.
+	nng_aio_wait(aio);
+
+	rv = nng_aio_result(aio);
+	if (rv != 0 || (msg = nng_aio_get_msg(aio)) == NULL) {
 		// Connection losted
-		log_warn("Can't get unsuback. Maybe connection of bridge was closed.");
+		log_warn("Can't get unsuback: %s (%d). Maybe connection of bridge was closed.",
+		    nng_strerror(rv), rv);
 		rv = -3;
 		goto done;
 	}

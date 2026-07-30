@@ -9,6 +9,7 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <signal.h>
 #include <errno.h>
 
@@ -927,9 +928,10 @@ proto_work_init(nng_socket sock, nng_socket extrasock, uint8_t proto,
 		if ((rv = nng_push0_open(&w->hook_sock)) != 0) {
 			NANO_NNG_FATAL("nng_socket", rv);
 		}
-		char *hook_ipc_url = config->hook_ipc_url == NULL
-		    ? HOOK_IPC_URL
-		    : config->hook_ipc_url;
+		char        hook_ipc_url_buf[IPC_URL_BUFFER_SIZE];
+		const char *hook_ipc_url = resolve_ipc_url(
+		    HOOK_IPC_URL_ENV, config->hook_ipc_url, HOOK_IPC_URL,
+		    HOOK_IPC_BASENAME, hook_ipc_url_buf, sizeof(hook_ipc_url_buf));
 		if ((rv = nng_dial(w->hook_sock, hook_ipc_url, NULL, 0)) != 0) {
 			NANO_NNG_FATAL("hook nng_dial", rv);
 		}
@@ -1378,14 +1380,10 @@ broker(conf *nanomq_conf)
 			cmd_works[i] = alloc_cmd_work(cmd_sock, nanomq_conf);
 		}
 
-		char *cmd_ipc_url = nanomq_conf->hook_ipc_url == NULL
-		    ? CMD_IPC_URL
-		    : nanomq_conf->cmd_ipc_url;
-		char *ipc_path = strstr(cmd_ipc_url, "ipc://") + strlen("ipc://");
-
-		if (nano_file_exists(ipc_path))
-			nng_file_delete(ipc_path);
-
+		char      cmd_ipc_url_buf[IPC_URL_BUFFER_SIZE];
+		const char *cmd_ipc_url = resolve_ipc_url(
+		    CMD_IPC_URL_ENV, nanomq_conf->cmd_ipc_url, CMD_IPC_URL,
+		    CMD_IPC_BASENAME, cmd_ipc_url_buf, sizeof(cmd_ipc_url_buf));
 		if ((rv = nng_listen(cmd_sock, cmd_ipc_url, NULL, 0)) != 0) {
 			NANO_NNG_FATAL("nng_listen ipc", rv);
 		}
@@ -2144,9 +2142,10 @@ broker_reload(int argc, char **argv)
 	conf_parse_ver2(nanomq_conf, false);
 	char *msg = encode_client_cmd(nanomq_conf->conf_file, rc);
 
-	char *cmd_ipc_url = nanomq_conf->hook_ipc_url == NULL
-	    ? CMD_IPC_URL
-	    : nanomq_conf->cmd_ipc_url;
+	char      cmd_ipc_url_buf[IPC_URL_BUFFER_SIZE];
+	const char *cmd_ipc_url = resolve_ipc_url(
+		CMD_IPC_URL_ENV, nanomq_conf->cmd_ipc_url, CMD_IPC_URL,
+		CMD_IPC_BASENAME, cmd_ipc_url_buf, sizeof(cmd_ipc_url_buf));
 	start_cmd_client(msg, cmd_ipc_url);
 
 	if (msg) {
@@ -2214,9 +2213,10 @@ broker_reload(int argc, char **argv)
 	conf_parse_ver2(nanomq_conf, false);
 
 	char *msg = encode_client_cmd(nanomq_conf->conf_file, rc);
-	char *cmd_ipc_url = nanomq_conf->hook_ipc_url == NULL
-	    ? CMD_IPC_URL
-	    : nanomq_conf->cmd_ipc_url;
+	char      cmd_ipc_url_buf[IPC_URL_BUFFER_SIZE];
+	const char *cmd_ipc_url = resolve_ipc_url(
+		CMD_IPC_URL_ENV, nanomq_conf->cmd_ipc_url, CMD_IPC_URL,
+		CMD_IPC_BASENAME, cmd_ipc_url_buf, sizeof(cmd_ipc_url_buf));
 
 	start_cmd_client(msg, cmd_ipc_url);
 

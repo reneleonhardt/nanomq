@@ -53,6 +53,13 @@ static void hook_work_cb(void *arg);
 
 static nng_thread     *hook_thr;
 
+static const char *
+resolve_hook_ipc_url(const char *config_url, char *ipc_url, size_t ipc_url_sz)
+{
+	return resolve_ipc_url(HOOK_IPC_URL_ENV, config_url, HOOK_IPC_URL,
+	    HOOK_IPC_BASENAME, ipc_url, ipc_url_sz);
+}
+
 static void
 send_msg(hook_work *w, nng_msg *msg)
 {
@@ -373,8 +380,10 @@ hook_cb(void *arg)
 		works[i]->id = i;
 	}
 
-	char *hook_ipc_url =
-	    conf->hook_ipc_url == NULL ? HOOK_IPC_URL : conf->hook_ipc_url;
+	char      hook_ipc_url_buf[IPC_URL_BUFFER_SIZE];
+	const char *hook_ipc_url =
+	    resolve_hook_ipc_url(conf->hook_ipc_url, hook_ipc_url_buf,
+	        sizeof(hook_ipc_url_buf));
 	// NanoMQ core thread talks to others via INPROC
 	if ((rv = nng_listen(sock, hook_ipc_url, NULL, 0)) != 0) {
 		log_error("hook nng_listen %d", rv);
@@ -414,4 +423,3 @@ stop_hook_service(void)
 	nng_thread_destroy(hook_thr);
 	return 0;
 }
-

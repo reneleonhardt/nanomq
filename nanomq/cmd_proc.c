@@ -16,6 +16,7 @@
 #include "nng/supplemental/nanolib/cJSON.h"
 #include "nng/supplemental/nanolib/utils.h"
 #include "nng/supplemental/util/platform.h"
+#include <stdlib.h>
 
 struct cmd_work {
 	enum {
@@ -190,8 +191,10 @@ server(void *arg)
 	struct cmd_work *works[CMD_PROC_PARALLEL];
 	int              rv;
 	int              i;
-	const char *     url = CMD_IPC_URL;
-
+	char        cmd_ipc_url_buf[IPC_URL_BUFFER_SIZE];
+	const char *url = resolve_ipc_url(
+	    CMD_IPC_URL_ENV, config->cmd_ipc_url, CMD_IPC_URL, CMD_IPC_BASENAME,
+	    cmd_ipc_url_buf, sizeof(cmd_ipc_url_buf));
 	/*  Create the socket. */
 	rv = nng_rep0_open(&sock);
 	if (rv != 0) {

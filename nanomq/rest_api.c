@@ -4592,6 +4592,10 @@ post_mqtt_bridge_sub(http_msg *msg, const char *name)
 			nng_mtx_unlock(node->mtx);
 			continue;
 		}
+		if (!node->enable) {
+			nng_mtx_unlock(node->mtx);
+			continue;
+		}
 		nng_mtx_unlock(node->mtx);
 
 		// Decode properties to nng_mqtt_property

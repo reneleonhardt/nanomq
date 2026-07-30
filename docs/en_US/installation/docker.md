@@ -120,6 +120,10 @@ NanoMQ also supports custom configurations through environment variables. Here i
 | Variables                       | Data Type | Description                                                  |
 | ------------------------------- | --------- | ------------------------------------------------------------ |
 | NANOMQ_BROKER_URL               | String    | `nmq-tcp://host:port`<br /> `tls+nmq-tcp://host:port`        |
+| NANOMQ_CMD_IPC_URL               | String    | Trusted caller-controlled command IPC `ipc://` URL; takes precedence over the configured command URL and bypasses root checks. |
+| NANOMQ_HOOK_IPC_URL              | String    | Trusted caller-controlled hook IPC `ipc://` URL; takes precedence over the configured hook URL and bypasses root checks. |
+| NANOMQ_IPC_ROOT                  | String    | Owner-controlled root for generated command and hook IPC paths when no explicit URL is set. |
+| NANOMQ_IPC_NAMESPACE             | String    | Optional generated IPC path suffix; used with `NANOMQ_IPC_ROOT` and must be unique for concurrent instances. |
 | NANOMQ_DAEMON                   | Boolean   | Daemon mode (default: False)                                 |
 | NANOMQ_NUM_TASKQ_THREAD         | Integer   | Number of task queue threads (range: 0 ~ 256)                |
 | NANOMQ_MAX_TASKQ_THREAD         | Integer   | Maximum task queue threads (range: 0 ~ 256)                  |
@@ -151,6 +155,8 @@ NanoMQ also supports custom configurations through environment variables. Here i
 | NANOMQ_LOG_ROTATION_COUNT       | Integer   | Maximum number of rotated log files;<br />Default: `5`       |
 | NANOMQ_CONF_PATH                | String    | NanoMQ configuration file path (default: `/etc/nanomq.conf`) |
 
+For command and hook IPC, NanoMQ resolves a non-empty explicit environment URL first, then the configured URL, then `NANOMQ_IPC_ROOT` with the optional `NANOMQ_IPC_NAMESPACE`, and finally its built-in default. Direct URLs are trusted caller-controlled endpoints and bypass root checks. Explicit URLs must be valid. When root-based endpoint generation is selected, the namespace must be valid and representable; otherwise NanoMQ fails instead of falling back. Use a unique namespace for each concurrently running instance. On POSIX, `NANOMQ_IPC_ROOT` must be an existing canonical directory owned by the effective user and not group- or other-writable.
+
 **Example: Specify the configuration file path through environment variables**
 
 ```bash
@@ -180,4 +186,3 @@ system.max_taskq_thread = 4
 system.parallel = 8
 mqtt.session.msq_len = 65535
 ```
-

@@ -116,6 +116,10 @@ NanoMQ 也支持通过环境变量自定义配置，支持的环境变量列表�
 | 变量名                          | 数据类型 | 描述                                                         |
 | ------------------------------- | -------- | ------------------------------------------------------------ |
 | NANOMQ_BROKER_URL               | String   | `nmq-tcp://host:port`<br /> `tls+nmq-tcp://host:port`        |
+| NANOMQ_CMD_IPC_URL               | String   | 受调用方信任并控制的命令 IPC `ipc://` URL，优先于配置的命令 URL，且会绕过根目录检查。 |
+| NANOMQ_HOOK_IPC_URL              | String   | 受调用方信任并控制的 Hook IPC `ipc://` URL，优先于配置的 Hook URL，且会绕过根目录检查。 |
+| NANOMQ_IPC_ROOT                  | String   | 未设置显式 URL 时，用于生成命令和 Hook IPC 路径的受所有者控制的根目录。 |
+| NANOMQ_IPC_NAMESPACE             | String   | 可选的生成 IPC 路径后缀；与 `NANOMQ_IPC_ROOT` 一起使用，并且必须在并发实例之间保持唯一。 |
 | NANOMQ_DAEMON                   | Boolean  | 后台启动（默认：False）                                      |
 | NANOMQ_NUM_TASKQ_THREAD         | Integer  | 任务线程数  (范围：0 ~ 256)                                  |
 | NANOMQ_MAX_TASKQ_THREAD         | Integer  | 最大任务线程数 (范围：0 ~ 256)                               |
@@ -147,6 +151,8 @@ NanoMQ 也支持通过环境变量自定义配置，支持的环境变量列表�
 | NANOMQ_LOG_ROTATION_COUNT       | Integer  | 轮换的最大日志文件数<br /> 默认： `5`                        |
 | NANOMQ_CONF_PATH                | String   | NanoMQ 配置文件路径（默认: `/etc/nanomq.conf`）              |
 
+对于命令和 Hook IPC，NanoMQ 依次解析非空的显式环境变量 URL、配置 URL、带可选 `NANOMQ_IPC_NAMESPACE` 的 `NANOMQ_IPC_ROOT`，最后使用内置默认值。直接 URL 是受调用方信任并控制的端点，会绕过根目录检查。显式 URL 必须有效。选择基于根目录的端点生成时，命名空间必须有效且可以表示；否则 NanoMQ 会失败且不会回退。每个并发实例必须使用唯一的命名空间。POSIX 上，`NANOMQ_IPC_ROOT` 必须是由有效用户拥有且不允许组或其他用户写入的现有规范目录。
+
 **示例：通过环境变量指定配置文件路径**
 
 ```bash
@@ -176,4 +182,3 @@ system.max_taskq_thread = 4
 system.parallel = 8
 mqtt.session.msq_len = 65535
 ```
-

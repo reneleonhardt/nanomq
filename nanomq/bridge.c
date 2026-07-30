@@ -1642,6 +1642,7 @@ bridge_subscribe(nng_socket *sock, conf_bridge_node *node,
 
 	if (nng_mqtt_msg_get_packet_type(msg) != NNG_MQTT_SUBACK) {
 		log_warn("Unknown error in handle bridge subscribe");
+		rv = NNG_EPROTO;
 		goto done;
 	}
 	rc = nng_mqtt_msg_get_suback_return_codes(msg, &rcsz);
@@ -1723,6 +1724,7 @@ bridge_unsubscribe(nng_socket *sock, conf_bridge_node *node,
 
 	if (nng_mqtt_msg_get_packet_type(msg) != NNG_MQTT_UNSUBACK) {
 		log_warn("Unknown error in handle bridge unsubscribe");
+		rv = NNG_EPROTO;
 		goto done;
 	}
 	rc = nng_mqtt_msg_get_unsuback_return_codes(msg, &rcsz);
